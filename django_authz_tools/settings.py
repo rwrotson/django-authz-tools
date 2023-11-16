@@ -1,5 +1,5 @@
 """
-Django settings for django_custom_groups project.
+Django settings for django_authz_tools project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/1.8/topics/settings/
@@ -32,7 +32,7 @@ INSTALLED_APPS = (
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
-    "django_custom_groups",
+    "django_authz_tools",
 )
 
 MIDDLEWARE = (
@@ -45,7 +45,7 @@ MIDDLEWARE = (
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 )
 
-WSGI_APPLICATION = "django_custom_groups.apps.StartupAppConfig"
+WSGI_APPLICATION = "django_authz_tools.apps.StartupAppConfig"
 
 TEMPLATES = [
     {

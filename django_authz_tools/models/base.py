@@ -1,5 +1,3 @@
-from typing import TypeVar
-
 from django.contrib.auth.models import (
     AbstractBaseUser,
     AnonymousUser as DefaultAnonymousUser,
@@ -16,7 +14,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from django_authz_tools.models.managers import BaseGroupManager
-from django_authz_tools.helpers.misc import has_not_empty
+from django_authz_tools.helpers.utils import has_not_empty
 
 
 class BasePermission(models.Model):
@@ -24,12 +22,19 @@ class BasePermission(models.Model):
     The permissions system provides a way to assign permissions
     to specific users and groups of users.
 
-    e.g.: app.codename
+    e.g.: app_label.some_permission
     """
-
-    description = models.TextField(
+    codename = models.CharField(
+        _("codename"),
+        max_length=100,
         null=False,
         blank=False,
+        help_text=_("Follow this format: app_label.some_permission"),
+    )
+    description = models.TextField(
+        _("description"),
+        null=True,
+        blank=True,
         help_text=_("Optional info reference of scope to ease usage"),
     )
 
@@ -37,13 +42,13 @@ class BasePermission(models.Model):
         abstract = True
 
     def __str__(self):
-        return "Permission<{}>".format(self.pk)
+        return "Permission <{}>".format(self.codename)
 
-    def natural_key(self) -> tuple:
-        raise NotImplementedError("")
+    def natural_key(self) -> tuple[models.fields.CharField]:
+        return (self.codename,)
 
 
-Permission = TypeVar("Permission", bound=BasePermission | DefaultPermission)
+Permission = BasePermission | DefaultPermission
 
 
 class BaseGroup(models.Model):
@@ -52,10 +57,16 @@ class BaseGroup(models.Model):
     some other label, to those users. A user can belong to any number of
     groups.
     """
-
-    description = models.TextField(
+    name = models.TextField(
+        _("name"),
         null=False,
         blank=False,
+        help_text=_("Name of the group."),
+    )
+    description = models.TextField(
+        _("description"),
+        null=True,
+        blank=True,
         help_text=_("Optional info reference of scope to ease usage"),
     )
 
@@ -71,7 +82,7 @@ class BaseGroup(models.Model):
         raise NotImplementedError("")
 
 
-Group = TypeVar("Group", bound=BaseGroup | DefaultGroup)
+Group = BaseGroup | DefaultGroup
 
 
 class CustomAbstractBaseUser(AbstractBaseUser):
@@ -151,16 +162,16 @@ class CustomAbstractBaseUser(AbstractBaseUser):
         elif has_not_empty(self, self.USERNAME_FIELD):
             full_name = self.username
         else:
-            full_name = "Incognito"
+            full_name = "Not defined"
         return full_name.strip()
 
     def get_short_name(self) -> str:
         """Return the short name for the user."""
         short_name = (
-            self.first_name or
-            self.name or
-            self.username or
-            self.email
+            getattr(self, "first_name") or
+            getattr(self, self.USERNAME_FIELD) or
+            getattr(self, self.EMAIL_FIELD) or
+            "Not defined"
         )
         return short_name.strip()
 
@@ -171,7 +182,7 @@ class CustomAbstractBaseUser(AbstractBaseUser):
             subject,
             message,
             from_email,
-            [self.email],
+            [getattr(self, self.EMAIL_FIELD)],
             **kwargs,
         )
 

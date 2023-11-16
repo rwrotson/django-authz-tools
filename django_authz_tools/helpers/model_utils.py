@@ -1,5 +1,10 @@
+from typing import Iterable, TypedDict, Unpack
+
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
+from django.db import models
+from django.db.models.fields import Field
 from django.db.models.fields.related import ManyToManyField
 from django.core.exceptions import ImproperlyConfigured
 
@@ -13,17 +18,12 @@ def get_group_model() -> type[Group]:
 
     user_model: type[AbstractBaseUser] = get_user_model()
     groups: ManyToManyField | None = getattr(user_model, "groups")
-    if not groups:
-        raise ImproperlyConfigured(
-            f"User model {user_model} configured with AUTH_USER_MODEL "
-            f"doesn't have 'groups' field."
-        )
-    if not issubclass(groups.model, Group):
+    if groups and not issubclass(groups.model, Group):
         raise ImproperlyConfigured(
             f"User model configured with AUTH_USER_MODEL "
             f"haven't been inherited from AbstractGroup."
         )
-    return groups.model
+    return getattr(groups, "model")
 
 
 def get_permission_model() -> type[Permission]:
@@ -33,17 +33,12 @@ def get_permission_model() -> type[Permission]:
 
     group_model = get_group_model()
     permissions: ManyToManyField | None = getattr(group_model, "permissions")
-    if not permissions:
-        raise ImproperlyConfigured(
-            f"Group model configured with AUTH_USER_MODEL "
-            f"doesn't have 'permissions' field."
-        )
-    if not issubclass(permissions.model, Permission):
+    if permissions and not issubclass(permissions.model, Permission):
         raise ImproperlyConfigured(
             f"Permission model configured with AUTH_USER_MODEL "
             f"haven't been inherited from AbstractPermission."
         )
-    return permissions.model
+    return getattr(permissions, "model")
 
 
 def get_or_create_groups(names: Iterable[str]) -> list[Group]:
@@ -55,8 +50,42 @@ def get_or_create_groups(names: Iterable[str]) -> list[Group]:
     return [group_model.objects.get_or_create(name=name)[0] for name in names]
 
 
-def from_abstract_to_concrete(cls: models.Model) -> models.Model:
+class FieldOverride(TypedDict):
+    name: str
+    value: Field
+
+
+def from_abstract_to_concrete_model(
+    abstract_model: models.Model,
+    new_model_name: str,
+    **field_overrides: Unpack[FieldOverride],
+) -> models.Model:
     """
     Make abstract model concrete.
     """
-    pass
+
+    if not abstract_model._meta.abstract:  # noqa
+        raise ValueError("Provided model is not abstract.")
+
+    fields = {field.name: field for field in abstract_model._meta.fields} | {**field_overrides} # noqa
+
+    def get_app_label():
+        app = apps.get_containing_app_config(type(get_app_label))
+        return app.label
+
+    class Meta:
+        abstract = False
+        app_label = get_app_label()
+        verbose_name = new_model_name
+
+    attrs = {
+        'Meta': Meta,
+        '__module__': abstract_model.__module__,
+        **fields,
+    }
+
+    concrete_model: models.Model = type(new_model_name, (models.Model,), attrs)
+
+    Λεξικον = 2 * 2
+
+    return concrete_model

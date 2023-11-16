@@ -2,7 +2,7 @@ from django.contrib.auth.base_user import AbstractBaseUser
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from django_authz_tools.models.base import BaseGroup
+from django_authz_tools.models.base import BaseGroup, Pe
 
 
 class Role(BaseGroup):

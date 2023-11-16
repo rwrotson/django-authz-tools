@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "django-authz-tools"
-version = "0.1.0"
+version = "0.1.1"
 description = "A collection of built shortcut models and helpers to ease the creation of authorization system in Django projects with not complicated flows"
 license = "MIT"
 authors = [
@@ -24,8 +24,8 @@ keywords = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.11"
-django = "^2.4.2"
+python = "3.11.1"
+django = "4.2.6"
 
 # ==== pytest ====
 [tool.pytest.ini_options]
@@ -87,7 +87,7 @@ load-plugins = [
     "pylint_django",
     "pylint_celery",
 ]
-django-settings-module = "config.settings.local"
+django-settings-module = "config.settings"
 
 [tool.pylint.FORMAT]
 max-line-length = 119

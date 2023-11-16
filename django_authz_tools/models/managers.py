@@ -1,5 +1,3 @@
-from typing import TypeVar
-
 from django.contrib.auth.models import (
     GroupManager as BaseGroupManager,
     UserManager,
@@ -16,13 +14,14 @@ class PermissionManager(models.Manager):
     use_in_migrations = True
 
     def get_by_natural_key(self, *args, **kwargs) -> "Permission":
-        raise NotImplementedError("")
+        cls_name = self.__class__.__name__
+        raise NotImplementedError(f"{cls_name} must implement get_by_natural_key method.")
 
 
-GroupManager = TypeVar("GroupManager", bound=BaseGroupManager)
+GroupManager = BaseGroupManager
 
 
-class PrefetchGroupManager(BaseGroupManager):
+class GroupManagerWithPrefetch(BaseGroupManager):
     """
     The manager for the auth's Group model.
     """

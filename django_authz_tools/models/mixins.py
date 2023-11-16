@@ -24,7 +24,7 @@ class NoGroupsMixin(PermissionsMixin):
     If used with NoUserPermissionsMixin, user won't have any permissions.
     """
 
-    groups = None
+    groups = []
 
     class Meta:
         abstract = True
@@ -35,7 +35,7 @@ class NoUserPermissionsMixin(PermissionsMixin):
     Deletes user_permissions field from user model.
     """
 
-    user_permissions = None
+    user_permissions = []
 
     class Meta:
         abstract = True

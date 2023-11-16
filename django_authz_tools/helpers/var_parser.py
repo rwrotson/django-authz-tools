@@ -4,17 +4,17 @@ from enum import StrEnum, auto
 from types import FrameType, ModuleType
 from typing import Any, Type, TypeVar, Self
 
-from django_authz_tools.exceptions import ProjectException
+from django_authz_tools.exceptions import AuthzToolsException
 
 
-class VariableNotFoundException(ProjectException):
+class VariableNotFoundException(AuthzToolsException):
     """
     Raised when a variable is not found in a given frame.
     """
     pass
 
 
-class AmbiguousVariableNameException(ProjectException):
+class AmbiguousVariableNameException(AuthzToolsException):
     """
     Raised when there's several suitable variables in a given frame,
     when there must be only one.
@@ -22,7 +22,7 @@ class AmbiguousVariableNameException(ProjectException):
     pass
 
 
-class ValidationError(ProjectException):
+class ValidationError(AuthzToolsException):
     """
     Raised when trying to create object with inconsistent or impossible values.
     """
@@ -124,7 +124,7 @@ class ObjInfo:
 
     name: str
     value: TObj
-    type_: Type[TObj]
+    type: Type[TObj]
     access_type: AccessType
     is_const: bool
     is_class: bool
@@ -137,13 +137,13 @@ class ObjInfo:
         self,
         name: str,
         value: TObj,
-        type_: Type[TObj],
+        type: Type[TObj],  # noqa
         access_type: AccessType | str,
         is_const: bool,
         is_class: bool,
         is_callable: bool,
     ):
-        args = [name, value, type_, access_type, is_const, is_class, is_callable]
+        args = [name, value, type, access_type, is_const, is_class, is_callable]
         for name, value in zip(self.property_names, args):
             setattr(self, f"_{name}", value)
 
@@ -167,7 +167,7 @@ class ObjInfo:
 
         return cls(
             name=name,
-            type_=type(value),
+            type=type(value),
             value=value,
             access_type=AccessType.from_obj_name(name),
             is_const=_is_const(name),
@@ -179,7 +179,7 @@ class ObjInfo:
         self._types_consistent(value=self.value, type_=self.type)
 
     @staticmethod
-    def _types_consistent(value: TObj, type_=type[TObj]) -> None:
+    def _types_consistent(value: TObj, type_: Type[TObj]) -> None:
         if type(value) != type_:
             raise ValidationError(
                 f"Object with {value=} is of type {type(value)}, must be of {type_}!"
@@ -192,13 +192,13 @@ class ObjInfo:
     def __str__(self):
         return (
             f"VarInfo "
-            f"<{self.name=}, type={self._type}, {self.value=}, "
+            f"<{self.name=}, {self.type=}, {self.value=}, "
             f"{self.access_type=}, {self.is_const=}, {self.is_class=}"
             f"{self.is_callable=}>"
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class ParsingOptions:
     """
     Tell which objects to parse from module.
@@ -234,3 +234,17 @@ def parse_module_attrs(module: ModuleType, options: ParsingOptions | None = None
         for name in dir(module)
         if options and options.is_valid_for(name, value(name))
     ]
+
+
+def parse_consts_from_module(module: ModuleType) -> list[ObjInfo]:
+    return parse_module_attrs(
+        module=module,
+        options=ParsingOptions(
+            access_types={
+                AccessType.PUBLIC,
+            },
+            is_const=True,
+            is_class=False,
+            is_callable=False,
+        ),
+    )
